@@ -37,6 +37,8 @@ def load_raw(path_or_buffer) -> pd.DataFrame:
     """Read the CSV defensively. Keeps everything as string initially -
     numeric/date parsing happens explicitly in normalize() so we control
     every conversion instead of letting pandas guess."""
+    if hasattr(path_or_buffer, "seek"):
+        path_or_buffer.seek(0)
     df = pd.read_csv(path_or_buffer, dtype=str, keep_default_na=False)
     df.columns = [c.strip().lower() for c in df.columns]
     # Some exports may be missing a column or have extras - align to

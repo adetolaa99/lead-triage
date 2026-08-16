@@ -1,6 +1,19 @@
+import io
 import streamlit as st
 import pandas as pd
 from pipeline import run_pipeline
+
+
+@st.cache_data(show_spinner="Cleaning data, reading notes, scoring leads...")
+def process_file(file_bytes: bytes):
+    """Cached so that clicking around the app (picking a different lead,
+    changing a filter) never re-reads the uploaded file. Streamlit reruns
+    the whole script on every interaction, and re-reading the SAME
+    uploaded-file object a second time returns empty content because its
+    internal read pointer is already at the end - this was the cause of
+    the KeyError. Using raw bytes + a fresh BytesIO each time avoids that,
+    and caching means the CSV is only actually parsed once per file."""
+    return run_pipeline(io.BytesIO(file_bytes))
 
 st.set_page_config(page_title="Lead Triage", layout="wide")
 
@@ -15,8 +28,7 @@ st.caption(
 uploaded = st.file_uploader("Upload lead export (.csv)", type=["csv"])
 
 if uploaded:
-    with st.spinner("Cleaning data, reading notes, scoring leads..."):
-        ranked, removed, summary = run_pipeline(uploaded)
+    ranked, removed, summary = process_file(uploaded.getvalue())
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Contact Now", summary.get("Contact Now", 0))
