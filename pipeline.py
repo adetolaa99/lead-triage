@@ -335,7 +335,8 @@ def score_row(row: dict) -> dict:
 
     if c["lead_type"] in ("non_buyer", "unreachable"):
         return {"score": 0, "bucket": "Disqualify",
-                "reason": c["disqualify_reason"] or c["lead_type"]}
+                "reason": c["disqualify_reason"] or c["lead_type"],
+                "budget_pts": 0, "urgency_pts": 0, "authority_pts": 0, "fit_pts": 0}
 
     budget = row.get("monthly_budget_usd")
     employees = row.get("employees_n") or c.get("notes_employee_mention")
@@ -403,7 +404,9 @@ def score_row(row: dict) -> dict:
     if not reason_bits:
         reason_bits.append(f"{c['lead_type']}, score {total}/100")
 
-    return {"score": total, "bucket": bucket, "reason": "; ".join(reason_bits)}
+    return {"score": total, "bucket": bucket, "reason": "; ".join(reason_bits),
+            "budget_pts": budget_pts, "urgency_pts": urgency_pts,
+            "authority_pts": authority_pts, "fit_pts": fit_pts}
 
 
 # ---------------------------------------------------------------------
@@ -429,7 +432,8 @@ def run_pipeline(path_or_buffer):
     output_cols = [
         "lead_id", "name", "email", "company", "employees_n", "monthly_budget_usd",
         "title", "source", "created_date", "lead_type", "urgency", "budget_approved",
-        "score", "bucket", "reason",
+        "budget_pts", "urgency_pts", "authority_pts", "fit_pts",
+        "score", "bucket", "reason", "notes",
     ]
     ranked = kept[output_cols].sort_values(["bucket", "score"],
                                             key=lambda s: s if s.name != "bucket"
