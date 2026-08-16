@@ -18,12 +18,7 @@ def process_file(file_bytes: bytes):
 st.set_page_config(page_title="Lead Triage", layout="wide")
 
 st.title("Lead Triage System")
-st.caption(
-    "Upload a lead export (.csv) with columns: lead_id, created, name, email, "
-    "company, employees, website, title, source, monthly_budget, notes. "
-    "The system cleans it, reads every note, scores intent + fit, and ranks "
-    "every lead into Contact Now / Nurture / Disqualify."
-)
+st.caption("Upload a lead export to get every lead cleaned, scored, and ranked.")
 
 uploaded = st.file_uploader("Upload lead export (.csv)", type=["csv"])
 
@@ -51,8 +46,6 @@ if uploaded:
         )
         summary_cols = ["lead_id", "company", "score", "bucket", "reason"]
         view = ranked[ranked["bucket"].isin(bucket_filter)][summary_cols]
-        st.caption("This is a summary view (5 columns) so it fits on screen without side-scrolling. "
-                   "Use the 'Inspect a single lead' tab to see everything about one lead.")
         st.dataframe(view, use_container_width=True, height=450, hide_index=True)
 
         st.download_button(
@@ -64,7 +57,6 @@ if uploaded:
 
     # ---------------- TAB 2: single-lead inspector ----------------
     with tab_inspect:
-        st.caption("Pick one lead to see its original note, side by side with exactly how it scored.")
         options = ranked["lead_id"] + " — " + ranked["company"].fillna("") + " (" + ranked["bucket"] + ")"
         choice = st.selectbox("Choose a lead", options)
         chosen_id = choice.split(" — ")[0]
@@ -77,7 +69,7 @@ if uploaded:
             st.markdown(f"**Contact:** {lead['name']} — {lead['email']}")
             st.markdown(f"**Employees (parsed):** {lead['employees_n']}  |  "
                         f"**Monthly budget (parsed):** {lead['monthly_budget_usd']}")
-            st.markdown("**Original note (verbatim from the export):**")
+            st.markdown("**Original note:**")
             st.info(lead["notes"] if pd.notna(lead["notes"]) and lead["notes"] else "(no note provided)")
 
         with right:
@@ -91,8 +83,6 @@ if uploaded:
 
     # ---------------- TAB 3: removed rows ----------------
     with tab_removed:
-        st.caption("Rows removed BEFORE scoring even started — blank rows, test rows, and duplicate "
-                   "submissions. Nothing here was scored or judged; it just isn't a usable, unique lead.")
         st.dataframe(removed, use_container_width=True, hide_index=True)
         st.download_button(
             "Download removed/audit rows (CSV)",
@@ -105,27 +95,16 @@ if uploaded:
     with tab_logic:
         st.markdown(
             """
-            ### How every lead gets a score
-
             **Score = Budget (0–35) + Urgency (0–25) + Decision authority (0–15) + Fit (0–25)**
 
-            Before scoring, any lead identified as a **non-buyer** — job seeker, student,
-            journalist, investor, competitor doing research, recruiter pitch, or spam — is
-            disqualified immediately with the reason recorded. Everyone else gets scored:
+            Non-buyers (job seekers, students, journalists, investors, competitors, spam)
+            are disqualified automatically before scoring.
 
-            - **Budget**: parsed from the budget field, boosted if the notes say
-              "budget approved," reduced if the notes say "price sensitive" or
-              "budget not locked yet."
-            - **Urgency**: language like "wants to start ASAP" or "ready to pilot in the
-              next 2 weeks" scores high; "comparing a few options" scores low.
-            - **Decision authority**: "decision is mine" scores high; "not sure who signs
-              off internally" scores low.
-            - **Fit**: does the lead match the core client profile (a marketing/growth
-              agency with a described operational pain point), or is it adjacent
-              (a budgeted-but-different type of business) or weak (interest, no real
-              budget)?
-
-            **Thresholds:** score ≥ 65 → Contact Now · 35–64 → Nurture · below 35 → Disqualify
+            | Score | Bucket |
+            |---|---|
+            | 65–100 | Contact Now |
+            | 35–64 | Nurture |
+            | 0–34 | Disqualify |
             """
         )
 else:
